@@ -2,38 +2,46 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>INTELLOG OS | Final Fix</title>
+    <title>INTELLOG OS | Fixed Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>.panel { display: none; } .active { display: block; }</style>
 </head>
-<body class="bg-slate-50 font-sans">
+<body class="bg-slate-50">
 
     <script>
-        // STEP 1: Connect to Database immediately
-        const supabaseUrl = 'https://ycqlverxbwwiofawsklz.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljcWx2ZXJ4Ynd3aW9mYXdza2x6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc5NzEyNDgsImV4cCI6MjA4MzU0NzI0OH0.HP_U6hY25ZSemARtjn6ERbpyZEcaPkZkitFFHR1EE30'; // PASTE KEY FROM SCREENSHOT 234758
+        // INITIALIZE AT THE VERY TOP
+        const supabaseUrl = 'https://ycqlverxbwwiofawsklz.supabase.co'; 
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljcWx2ZXJ4Ynd3aW9mYXdza2x6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc5NzEyNDgsImV4cCI6MjA4MzU0NzI0OH0.HP_U6hY25ZSemARtjn6ERbpyZEcaPkZkitFFHR1EE30'; //
         const supabase = supabasejs.createClient(supabaseUrl, supabaseKey);
+
+        // This function ensures panels switch even if DB is slow
+        function showPanel(id) {
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if (id === 'client') renderClientView();
+            if (id === 'admin') renderAdminView();
+        }
     </script>
 
     <nav class="bg-blue-900 text-white p-4 flex justify-between shadow-lg">
         <h1 class="text-xl font-bold italic">INTELLOG OS</h1>
-        <div class="space-x-4">
-            <button onclick="showPanel('owner')" class="hover:text-yellow-400 font-bold">Truck Owner</button>
-            <button onclick="showPanel('client')" class="hover:text-yellow-400 font-bold">Bidders</button>
-            <button onclick="adminLogin()" class="text-yellow-400 font-bold border-b-2 border-yellow-400">Admin Portal</button>
+        <div class="space-x-4 font-bold">
+            <button onclick="showPanel('owner')" class="hover:text-yellow-400">Truck Owner</button>
+            <button onclick="showPanel('client')" class="hover:text-yellow-400">Bidders</button>
+            <button onclick="adminLogin()" class="text-yellow-400 border-b-2">Admin Portal</button>
         </div>
     </nav>
 
     <div class="container mx-auto p-6">
         <div id="owner" class="panel active bg-white p-8 rounded-xl shadow-md border-t-4 border-blue-600">
-            <h2 class="text-2xl mb-6 font-bold text-gray-800">Post Available Return Trip</h2>
+            <h2 class="text-2xl mb-6 font-bold">Post Return Trip</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input id="truckNo" placeholder="Truck Reg No." class="border p-3 rounded">
-                <input id="maxVol" type="number" placeholder="Volume (cu.ft)" class="border p-3 rounded">
-                <input id="fromLoc" placeholder="Pickup (e.g. Hyderabad)" class="border p-3 rounded bg-blue-50">
-                <input id="toLoc" placeholder="Drop (e.g. Chennai)" class="border p-3 rounded bg-blue-50">
-                <input id="floorPrice" type="number" placeholder="Min Amount (₹)" class="border p-3 rounded font-bold">
+                <input id="truckNo" placeholder="Truck No" class="border p-3 rounded">
+                <input id="maxVol" type="number" placeholder="Volume" class="border p-3 rounded">
+                <input id="fromLoc" placeholder="From (e.g. Hyderabad)" class="border p-3 rounded bg-blue-50">
+                <input id="toLoc" placeholder="To (e.g. Chennai)" class="border p-3 rounded bg-blue-50">
+                <input id="floorPrice" type="number" placeholder="Min Price (₹)" class="border p-3 rounded font-bold">
                 <input id="deadline" type="datetime-local" class="border p-3 rounded">
             </div>
             <button onclick="listTruck()" class="mt-6 bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-800 transition">List Truck Availability</button>
@@ -44,14 +52,6 @@
     </div>
 
     <script>
-        // STEP 2: UI and Logic
-        function showPanel(id) {
-            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-            if (id === 'client') renderClientView();
-            if (id === 'admin') renderAdminView();
-        }
-
         async function adminLogin() {
             const pass = prompt("Admin Password:");
             if (pass === "Intellog@2026") {
@@ -61,6 +61,7 @@
         }
 
         async function listTruck() {
+            console.log("Attempting to save truck...");
             const truckData = {
                 truck_no: document.getElementById('truckNo').value,
                 volume: parseFloat(document.getElementById('maxVol').value),
@@ -70,23 +71,26 @@
                 deadline: document.getElementById('deadline').value
             };
 
-            const { error } = await supabase.from('trucks').insert([truckData]);
+            const { error } = await supabase.from('trucks').insert([truckData]); //
+            
             if (error) {
-                alert("Database Error: " + error.message);
+                console.error("Database Error:", error);
+                alert("Error: " + error.message);
             } else {
-                alert("Success! Truck Listed.");
+                alert("Success! Truck " + truckData.truck_no + " is now live.");
                 showPanel('client');
             }
         }
 
         async function renderClientView() {
-            const { data: trucks } = await supabase.from('trucks').select('*');
-            document.getElementById('availableTrucksList').innerHTML = trucks?.length ? trucks.map(t => `
+            const { data: trucks } = await supabase.from('trucks').select('*'); //
+            const list = document.getElementById('availableTrucksList');
+            list.innerHTML = trucks?.length ? trucks.map(t => `
                 <div class="border p-4 rounded bg-gray-50 flex justify-between items-center shadow-sm">
                     <div><b>${t.from_loc} to ${t.to_loc}</b><br>Truck: ${t.truck_no} | Min: ₹${t.floor_price}</div>
                     <button class="bg-green-600 text-white px-4 py-2 rounded">Place Bid</button>
                 </div>
-            `).join('') : '<p class="text-gray-400">No trucks available.</p>';
+            `).join('') : '<p class="text-gray-400 text-center">No trucks listed.</p>';
         }
 
         async function renderAdminView() {
@@ -98,7 +102,7 @@
                 const { data: bids } = await supabase.from('bids').select('*').eq('truck_id', t.id);
                 html += `
                     <div class="p-4 bg-blue-50 border-l-4 border-blue-900 rounded shadow mb-4">
-                        <h3 class="font-bold">${t.truck_no} | Min: ₹${t.floor_price}</h3>
+                        <h3 class="font-bold">${t.truck_no} | Owner Min: ₹${t.floor_price}</h3>
                         <div class="mt-2">${bids?.map(b => `<div class="p-2 bg-white mt-1 border">${b.company_name}: ₹${b.bid_amount}</div>`).join('') || 'No bids.'}</div>
                     </div>`;
             }
