@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intellog OS | Smart Backhaul</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .panel { display: none; }
+        .active { display: block; }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <nav class="bg-blue-900 text-white p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold italic">INTELLOG OS</h1>
+            <div class="space-x-4">
+                <button onclick="showPanel('owner')" class="hover:underline">Truck Owner</button>
+                <button onclick="showPanel('client')" class="hover:underline">Bidders</button>
+                <button onclick="showPanel('admin')" class="hover:underline text-yellow-400 font-bold">Admin Portal</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-6">
+        
+        <div id="owner" class="panel active bg-white p-8 rounded-lg shadow">
+            <h2 class="text-2xl mb-4 border-b pb-2">Post Available Return Trip</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input id="truckNo" type="text" placeholder="Truck Reg No." class="border p-2 rounded">
+                <input id="maxVol" type="number" placeholder="Total Volume (cu.ft)" class="border p-2 rounded">
+                <input id="floorPrice" type="number" placeholder="Min Floor Price (₹)" class="border p-2 rounded">
+                <input id="deadline" type="datetime-local" class="border p-2 rounded">
+            </div>
+            <button onclick="listTruck()" class="mt-4 bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">List Truck</button>
+        </div>
+
+        <div id="client" class="panel bg-white p-8 rounded-lg shadow">
+            <h2 class="text-2xl mb-4 border-b pb-2">Available Trucks: Coimbatore to Chennai</h2>
+            <div id="availableTrucksList" class="space-y-4">
+                <p class="text-gray-500">Waiting for Truck Owner to list availability...</p>
+            </div>
+        </div>
+
+        <div id="admin" class="panel bg-white p-8 rounded-lg shadow">
+            <h2 class="text-2xl mb-4 border-b pb-2 text-blue-900">Intellog OS Control Room</h2>
+            <div id="adminBidsView">
+                <p class="text-gray-500">No active tenders to review.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let trips = [];
+        let bids = [];
+
+        function showPanel(id) {
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            renderClientView();
+            renderAdminView();
+        }
+
+        function listTruck() {
+            const trip = {
+                id: Date.now(),
+                truck: document.getElementById('truckNo').value,
+                vol: parseFloat(document.getElementById('maxVol').value),
+                price: document.getElementById('floorPrice').value,
+                deadline: document.getElementById('deadline').value
+            };
+            trips.push(trip);
+            alert("Truck listed successfully on Intellog OS!");
+            showPanel('client');
+        }
+
+        function submitBid(tripId) {
+            const bid = {
+                id: Date.now(),
+                tripId: tripId,
+                company: prompt("Enter your Company Name:"),
+                reqVol: parseFloat(prompt("Required Volume (cu.ft):")),
+                amount: parseFloat(prompt("Your Secret Bid Amount (₹):")),
+                status: 'Pending'
+            };
+            bids.push(bid);
+            alert("Blind tender submitted to Intellog OS.");
+        }
+
+        function renderClientView() {
+            const list = document.getElementById('availableTrucksList');
+            list.innerHTML = trips.map(t => `
+                <div class="border p-4 rounded flex justify-between items-center bg-gray-50">
+                    <div>
+                        <p class="font-bold">Truck: ${t.truck}</p>
+                        <p class="text-sm text-gray-600">Space: ${t.vol} cu.ft | Ends: ${t.deadline}</p>
+                    </div>
+                    <button onclick="submitBid(${t.id})" class="bg-green-600 text-white px-4 py-2 rounded">Place Bid</button>
+                </div>
+            `).join('');
+        }
+
+        function renderAdminView() {
+            const view = document.getElementById('adminBidsView');
+            view.innerHTML = trips.map(t => {
+                const truckBids = bids.filter(b => b.tripId === t.id);
+                return `
+                    <div class="mb-8 border-l-4 border-blue-900 pl-4">
+                        <h3 class="font-bold text-lg">Management for ${t.truck} (${t.vol} cu.ft)</h3>
+                        <table class="w-full mt-2 border-collapse text-sm">
+                            <tr class="bg-gray-200">
+                                <th class="border p-2">Bidder</th>
+                                <th class="border p-2">Volume</th>
+                                <th class="border p-2">Price</th>
+                                <th class="border p-2">Select</th>
+                            </tr>
+                            ${truckBids.map(b => `
+                                <tr>
+                                    <td class="border p-2">${b.company}</td>
+                                    <td class="border p-2">${b.reqVol}</td>
+                                    <td class="border p-2">₹${b.amount}</td>
+                                    <td class="border p-2 text-center"><input type="checkbox"></td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                        <button class="mt-2 bg-blue-900 text-white px-3 py-1 rounded text-xs">Finalize Selection</button>
+                    </div>
+                `;
+            }).join('');
+        }
+    </script>
+</body>
+</html>
