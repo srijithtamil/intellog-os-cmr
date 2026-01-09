@@ -3,132 +3,140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Intellog OS | Smart Backhaul</title>
+    <title>INTELLOG OS | Smart Logistics</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .panel { display: none; }
-        .active { display: block; }
-    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>.panel { display: none; } .active { display: block; }</style>
 </head>
 <body class="bg-gray-100 font-sans">
-
     <nav class="bg-blue-900 text-white p-4 shadow-lg">
         <div class="container mx-auto flex justify-between items-center">
             <h1 class="text-2xl font-bold italic">INTELLOG OS</h1>
             <div class="space-x-4">
                 <button onclick="showPanel('owner')" class="hover:underline">Truck Owner</button>
                 <button onclick="showPanel('client')" class="hover:underline">Bidders</button>
-                <button onclick="showPanel('admin')" class="hover:underline text-yellow-400 font-bold">Admin Portal</button>
+                <button onclick="adminLogin()" class="hover:underline text-yellow-400 font-bold">Admin Portal</button>
             </div>
         </div>
     </nav>
 
     <div class="container mx-auto p-6">
-        
         <div id="owner" class="panel active bg-white p-8 rounded-lg shadow">
-            <h2 class="text-2xl mb-4 border-b pb-2">Post Available Return Trip</h2>
+            <h2 class="text-2xl mb-4 border-b pb-2 font-bold text-blue-900">Post Available Return Trip</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input id="truckNo" type="text" placeholder="Truck Reg No." class="border p-2 rounded">
                 <input id="maxVol" type="number" placeholder="Total Volume (cu.ft)" class="border p-2 rounded">
-                <input id="floorPrice" type="number" placeholder="Min Floor Price (₹)" class="border p-2 rounded">
+                <input id="fromLoc" type="text" placeholder="Pickup Location (e.g. Coimbatore)" class="border p-2 rounded">
+                <input id="toLoc" type="text" placeholder="Drop Location (e.g. Chennai)" class="border p-2 rounded">
+                <input id="floorPrice" type="number" placeholder="Min Amount Demanded (₹)" class="border p-2 rounded">
                 <input id="deadline" type="datetime-local" class="border p-2 rounded">
             </div>
-            <button onclick="listTruck()" class="mt-4 bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">List Truck</button>
+            <button onclick="listTruck()" class="mt-4 bg-blue-600 text-white px-6 py-2 rounded w-full md:w-auto">List Truck Availability</button>
         </div>
 
         <div id="client" class="panel bg-white p-8 rounded-lg shadow">
-            <h2 class="text-2xl mb-4 border-b pb-2">Available Trucks: Coimbatore to Chennai</h2>
-            <div id="availableTrucksList" class="space-y-4">
-                <p class="text-gray-500">Waiting for Truck Owner to list availability...</p>
-            </div>
+            <h2 class="text-2xl mb-4 border-b pb-2 text-blue-900 font-bold">Available Load Space</h2>
+            <div id="availableTrucksList" class="space-y-4"></div>
         </div>
 
         <div id="admin" class="panel bg-white p-8 rounded-lg shadow">
-            <h2 class="text-2xl mb-4 border-b pb-2 text-blue-900">Intellog OS Control Room</h2>
-            <div id="adminBidsView">
-                <p class="text-gray-500">No active tenders to review.</p>
-            </div>
+            <h2 class="text-2xl mb-4 border-b pb-2 text-blue-900 font-bold">Intellog OS Control Room</h2>
+            <div id="adminBidsView" class="space-y-6"></div>
         </div>
-
     </div>
 
     <script>
-        let trips = [];
-        let bids = [];
+        const supabaseUrl = 'https://ycqlverxbwwiofawsklz.supabase.co'; //
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljcWx2ZXJ4Ynd3aW9mYXdza2x6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc5NzEyNDgsImV4cCI6MjA4MzU0NzI0OH0.HP_U6hY25ZSemARtjn6ERbpyZEcaPkZkitFFHR1EE30'; 
+        const _supabase = supabasejs.createClient(supabaseUrl, supabaseKey);
 
         function showPanel(id) {
             document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
             document.getElementById(id).classList.add('active');
-            renderClientView();
-            renderAdminView();
+            if (id === 'client') renderClientView();
+            if (id === 'admin') renderAdminView();
         }
 
-        function listTruck() {
-            const trip = {
-                id: Date.now(),
-                truck: document.getElementById('truckNo').value,
-                vol: parseFloat(document.getElementById('maxVol').value),
-                price: document.getElementById('floorPrice').value,
+        async function adminLogin() {
+            const password = prompt("Enter Admin Password:");
+            if (password === "Intellog@2026") {
+                sessionStorage.setItem("isAdmin", "true");
+                showPanel('admin');
+            } else {
+                sessionStorage.setItem("isAdmin", "false");
+                alert("Access Denied!");
+            }
+        }
+
+        async function listTruck() {
+            const truckData = {
+                truck_no: document.getElementById('truckNo').value,
+                volume: parseFloat(document.getElementById('maxVol').value),
+                from_loc: document.getElementById('fromLoc').value,
+                to_loc: document.getElementById('toLoc').value,
+                floor_price: parseFloat(document.getElementById('floorPrice').value),
                 deadline: document.getElementById('deadline').value
             };
-            trips.push(trip);
-            alert("Truck listed successfully on Intellog OS!");
-            showPanel('client');
+            const { error } = await _supabase.from('trucks').insert([truckData]);
+            if (error) alert("Error: " + error.message);
+            else { alert("Truck Listed!"); showPanel('client'); }
         }
 
-        function submitBid(tripId) {
-            const bid = {
-                id: Date.now(),
-                tripId: tripId,
-                company: prompt("Enter your Company Name:"),
-                reqVol: parseFloat(prompt("Required Volume (cu.ft):")),
-                amount: parseFloat(prompt("Your Secret Bid Amount (₹):")),
-                status: 'Pending'
+        async function submitBid(truckId, minPrice) {
+            const bidAmt = parseFloat(prompt("Min demand is ₹" + minPrice + ". Enter your Bid:"));
+            if (bidAmt < minPrice) return alert("Bid must be ≥ ₹" + minPrice);
+            
+            const bidData = {
+                truck_id: truckId,
+                company_name: prompt("Company Name:"),
+                req_volume: parseFloat(prompt("Volume (cu.ft):")),
+                bid_amount: bidAmt
             };
-            bids.push(bid);
-            alert("Blind tender submitted to Intellog OS.");
+            const { error } = await _supabase.from('bids').insert([bidData]);
+            if (!error) alert("Bid submitted privately.");
         }
 
-        function renderClientView() {
+        async function renderClientView() {
+            const { data: trucks } = await _supabase.from('trucks').select('*');
             const list = document.getElementById('availableTrucksList');
-            list.innerHTML = trips.map(t => `
-                <div class="border p-4 rounded flex justify-between items-center bg-gray-50">
+            list.innerHTML = trucks?.length ? trucks.map(t => `
+                <div class="border p-4 rounded bg-gray-50 flex justify-between items-center shadow-sm">
                     <div>
-                        <p class="font-bold">Truck: ${t.truck}</p>
-                        <p class="text-sm text-gray-600">Space: ${t.vol} cu.ft | Ends: ${t.deadline}</p>
+                        <h3 class="font-bold text-xl">${t.from_loc} ➔ ${t.to_loc}</h3>
+                        <p class="text-sm">Truck: ${t.truck_no} | Capacity: ${t.volume} | <b>Min: ₹${t.floor_price}</b></p>
                     </div>
-                    <button onclick="submitBid(${t.id})" class="bg-green-600 text-white px-4 py-2 rounded">Place Bid</button>
+                    <button onclick="submitBid('${t.id}', ${t.floor_price})" class="bg-green-600 text-white px-6 py-2 rounded">Place Bid</button>
                 </div>
-            `).join('');
+            `).join('') : 'No trucks listed.';
         }
 
-        function renderAdminView() {
+        async function renderAdminView() {
+            if (sessionStorage.getItem("isAdmin") !== "true") return;
+            const { data: trucks } = await _supabase.from('trucks').select('*');
             const view = document.getElementById('adminBidsView');
-            view.innerHTML = trips.map(t => {
-                const truckBids = bids.filter(b => b.tripId === t.id);
-                return `
-                    <div class="mb-8 border-l-4 border-blue-900 pl-4">
-                        <h3 class="font-bold text-lg">Management for ${t.truck} (${t.vol} cu.ft)</h3>
-                        <table class="w-full mt-2 border-collapse text-sm">
-                            <tr class="bg-gray-200">
-                                <th class="border p-2">Bidder</th>
-                                <th class="border p-2">Volume</th>
-                                <th class="border p-2">Price</th>
-                                <th class="border p-2">Select</th>
-                            </tr>
-                            ${truckBids.map(b => `
-                                <tr>
-                                    <td class="border p-2">${b.company}</td>
-                                    <td class="border p-2">${b.reqVol}</td>
-                                    <td class="border p-2">₹${b.amount}</td>
-                                    <td class="border p-2 text-center"><input type="checkbox"></td>
-                                </tr>
-                            `).join('')}
-                        </table>
-                        <button class="mt-2 bg-blue-900 text-white px-3 py-1 rounded text-xs">Finalize Selection</button>
-                    </div>
-                `;
-            }).join('');
+            let html = "";
+            for (let t of (trucks || [])) {
+                const { data: bids } = await _supabase.from('bids').select('*').eq('truck_id', t.id);
+                html += `
+                    <div class="p-4 bg-blue-50 border-l-4 border-blue-900 rounded">
+                        <h3 class="font-bold">${t.truck_no} | Min Demand: ₹${t.floor_price}</h3>
+                        <div class="mt-2 space-y-1">
+                            ${bids?.map(b => `
+                                <div class="flex justify-between p-2 bg-white rounded">
+                                    <span>${b.company_name} (₹${b.bid_amount})</span>
+                                    <input type="checkbox" value="${b.id}" class="bid-chk-${t.id}">
+                                </div>`).join('') || 'No bids.'}
+                        </div>
+                        <button onclick="finalize('${t.id}')" class="mt-4 bg-blue-900 text-white px-4 py-2 rounded">Finalize Selection</button>
+                    </div>`;
+            }
+            view.innerHTML = html || 'No data.';
+        }
+
+        async function finalize(truckId) {
+            const checked = Array.from(document.querySelectorAll('.bid-chk-' + truckId + ':checked')).map(c => c.value);
+            const { error } = await _supabase.from('bids').update({ status: 'Accepted' }).in('id', checked);
+            if (!error) alert("Bids Finalized!");
         }
     </script>
 </body>
